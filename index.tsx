@@ -795,7 +795,7 @@ function updateCardDisplay(type: 'lyrics' | 'genreMood' | 'instruments' | 'vocal
         progressEl: HTMLDivElement | null = null,
         percentageEl: HTMLSpanElement | null = null,
         cardName = '',
-        currentCount = 0; 
+        currentCount = 0;
     let isPromptSent = false;
     let progressPercentage = 0;
 
@@ -803,27 +803,27 @@ function updateCardDisplay(type: 'lyrics' | 'genreMood' | 'instruments' | 'vocal
         case 'lyrics':
             valueEl = buatLirikValueElement; progressEl = buatLirikProgressBarElement; percentageEl = buatLirikPercentageElement; cardName = "Buat Lirik";
             currentCount = currentAppState.lyricCount; isPromptSent = currentAppState.lyricPromptSent;
-            progressPercentage = isPromptSent ? 25 : 0;
+            progressPercentage = isPromptSent ? 100 : 0; // Updated logic
             break;
         case 'genreMood':
             valueEl = designGenreValueElement; progressEl = designGenreProgressBarElement; percentageEl = designGenrePercentageElement; cardName = "Desain Genre & Mood";
             currentCount = currentAppState.designCount; isPromptSent = currentAppState.genreMoodPromptSent;
-            progressPercentage = isPromptSent ? 25 : 0;
+            progressPercentage = isPromptSent ? 100 : 0; // Updated logic
             break;
         case 'instruments':
             valueEl = instrumentDesignValueElement; progressEl = instrumentDesignProgressBarElement; percentageEl = instrumentDesignPercentageElement; cardName = "Desain Instrumen";
             currentCount = currentAppState.instrumentDesignCount; isPromptSent = currentAppState.instrumentPromptSent;
-            progressPercentage = isPromptSent ? 25 : 0;
+            progressPercentage = isPromptSent ? 100 : 0; // Updated logic
             break;
         case 'vocals':
             valueEl = vocalistDesignValueElement; progressEl = vocalistDesignProgressBarElement; percentageEl = vocalistDesignPercentageElement; cardName = "Desain Vokalis";
             currentCount = currentAppState.vocalistDesignCount; isPromptSent = currentAppState.vocalistPromptSent;
-            progressPercentage = isPromptSent ? 25 : 0;
+            progressPercentage = isPromptSent ? 100 : 0; // Updated logic
             break;
         case 'instrumentSpecific':
             valueEl = instrumentSpecificValueEl; progressEl = instrumentSpecificProgressBarEl; percentageEl = instrumentSpecificPercentageEl; cardName = "Khusus Instrumen";
             currentCount = currentAppState.instrumentSpecificCount;
-            progressPercentage = currentAppState.instrumentSpecificProgress || 0; // Use new progress state
+            progressPercentage = currentAppState.instrumentSpecificProgress || 0; // Existing logic for this card
             break;
     }
 
@@ -838,6 +838,7 @@ function updateCardDisplay(type: 'lyrics' | 'genreMood' | 'instruments' | 'vocal
         percentageEl.textContent = `${progressPercentage}%`;
     }
 }
+
 
 function updateAllCardDisplays() {
     updateCardDisplay('lyrics');
@@ -987,7 +988,6 @@ async function handleGenerateFinalMusicPrompt() {
         return;
     }
 
-
     generateMusicPromptButton.disabled = true;
     finalMusicPromptOutputArea.innerHTML = `<p>Mr. GenR sedang menyusun prompt musik final Anda, tunggu sebentar...</p>`;
     finalMusicPromptOutputContainer.style.display = 'block';
@@ -1102,10 +1102,45 @@ ${actualLyricsForFinalPrompt ? `Include these lyrics:\n\n[lirik dari data]` : 'M
         addNotification("Prompt Musik (Fallback)", "Prompt musik dasar berhasil disusun (tanpa tambahan AI).");
 
     } finally {
-        generateMusicPromptButton.disabled = false;
-        saveApplicationState();
+        if (generateMusicPromptButton) generateMusicPromptButton.disabled = false;
+
+        // Reset collected prompts and flags
+        currentAppState.collectedFinalPromptComponents = {};
+        currentAppState.lyricPromptSent = false;
+        currentAppState.genreMoodPromptSent = false;
+        currentAppState.instrumentPromptSent = false;
+        currentAppState.vocalistPromptSent = false;
+
+        // Reset Lyric Modal State
+        currentAppState.lyricModalSongTitle = '';
+        currentAppState.lyricModalOutput = 'Masukkan judul lagu dan klik "Buat Lirik" untuk memulai.';
+        currentAppState.lyricModalSelectedLanguage = 'indonesia';
+
+        // Reset Genre & Mood Modal State
+        currentAppState.genreMoodModalSelectedGenres = [];
+        currentAppState.genreMoodModalSelectedMood = null;
+        currentAppState.genreMoodModalOutput = 'Pilih genre dan mood, lalu klik tombol di atas untuk menggabungkannya.';
+
+        // Reset Instrument Modal State
+        currentAppState.instrumentModalSelectedMain = [];
+        currentAppState.instrumentModalSelectedAdditional = [];
+        currentAppState.instrumentModalOutput = 'Pilih instrumen, lalu klik tombol di atas untuk membuat daftar instrumen.';
+
+        // Reset Vocalist Modal State
+        currentAppState.vocalistModalIsMaleSelected = false;
+        currentAppState.vocalistModalMaleRange = null;
+        currentAppState.vocalistModalIsFemaleSelected = false;
+        currentAppState.vocalistModalFemaleRange = null;
+        currentAppState.vocalistModalArtistRef = '';
+        currentAppState.vocalistModalOutput = 'Pilih jenis vokal, range, dan (opsional) referensi artis, lalu klik tombol di atas.';
+        
+        // Re-render the entire UI to reflect all astate changes including progress bar resets
+        renderUIFromState();
+        
+        saveApplicationState(); 
     }
 }
+
 
 async function handleCopyFinalMusicPrompt() {
     if (!finalMusicPromptOutputArea || !copyFinalMusicPromptButton) return;
@@ -1568,7 +1603,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (savedPromptsModalEl && savedPromptsModalCloseButtonEl && musikKamuTabButtonEl && instrumenKamuTabButtonEl) {
         savedPromptsModalCloseButtonEl.addEventListener('click', hideSavedPromptsModal);
-        // Removed: savedPromptsModalEl.addEventListener('click', (e) => { if (e.target === savedPromptsModalEl) hideSavedPromptsModal(); });
+        // Removed: if (savedPromptsModalEl) savedPromptsModalEl.addEventListener('click', (e) => { if (e.target === savedPromptsModalEl) hideSavedPromptsModal(); });
         musikKamuTabButtonEl.addEventListener('click', () => switchSavedPromptsTab('music'));
         instrumenKamuTabButtonEl.addEventListener('click', () => switchSavedPromptsTab('instruments'));
     }
@@ -1706,7 +1741,7 @@ async function handleGenerateLyric() {
         lyricOutputArea.textContent = response.text.trim();
         lyricCount = (currentAppState.lyricCount || 0) + 1; 
         currentAppState.lyricCount = lyricCount; 
-        updateCardDisplay('lyrics');
+        // updateCardDisplay('lyrics'); // No longer needed here, will be handled by sendPromptButton if successful
         addNotification("Lirik Berhasil Dibuat!", `Lirik untuk "${songTitle}" (${languageForMessage}) telah selesai.`);
     } catch (error) {
         console.error("Error generating lyrics:", error);
@@ -1745,7 +1780,7 @@ function handleGenerateGenreMood() {
     if (parts.length > 0) {
         designCount = (currentAppState.designCount || 0) + 1;
         currentAppState.designCount = designCount;
-        updateCardDisplay('genreMood');
+        // updateCardDisplay('genreMood'); // No longer needed here
         addNotification("Kombinasi Genre & Mood Dibuat!", `Pilihan Anda: ${outputText}`);
     } else {  genreMoodOutputArea.innerHTML = `<p style="color:var(--accent-red);">Tidak ada pilihan yang valid.</p>`; }
     
@@ -1777,7 +1812,7 @@ function handleGenerateInstrumentList() {
     if (allInstruments.length > 0) {
         instrumentDesignCount = (currentAppState.instrumentDesignCount || 0) + 1; 
         currentAppState.instrumentDesignCount = instrumentDesignCount;
-        updateCardDisplay('instruments');
+        // updateCardDisplay('instruments'); // No longer needed here
         addNotification("Daftar Instrumen Dibuat!", `Instrumen terpilih: ${outputText}`);
     } else { instrumentOutputArea.innerHTML = `<p style="color:var(--accent-red);">Tidak ada instrumen yang dipilih.</p>`; }
     
@@ -1994,7 +2029,7 @@ async function handleGenerateVocalistDescription() {
         currentAppState.vocalistModalOutput = outputText;
         vocalistDesignCount = (currentAppState.vocalistDesignCount || 0) + 1;
         currentAppState.vocalistDesignCount = vocalistDesignCount;
-        updateCardDisplay('vocals');
+        // updateCardDisplay('vocals'); // No longer needed here
         addNotification("Karakter Vokalis Dibuat!", `Vokalis: ${outputText}`);
         generateVocalistButton.disabled = false;
         saveApplicationState();
@@ -2021,7 +2056,7 @@ async function handleGenerateVocalistDescription() {
             currentAppState.vocalistModalOutput = aiResponseText;
             vocalistDesignCount = (currentAppState.vocalistDesignCount || 0) + 1;
             currentAppState.vocalistDesignCount = vocalistDesignCount;
-            updateCardDisplay('vocals');
+            // updateCardDisplay('vocals'); // No longer needed here
             addNotification("Desain Vokalis Selesai!", `Karakteristik vokalis untuk "${artistRef}" telah berhasil didesain.`);
         } catch (error) {
             console.error("Error generating vocalist description with artist ref:", error);
